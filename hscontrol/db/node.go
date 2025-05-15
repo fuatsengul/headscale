@@ -185,6 +185,30 @@ func GetNodeByNodeKey(
 	return &mach, nil
 }
 
+func (hsdb *HSDatabase) GetNodeByHostname(userID types.UserID, hostname string) (*types.Node, error) {
+	return Read(hsdb.DB, func(rx *gorm.DB) (*types.Node, error) {
+		return GetNodeByHostname(rx, userID, hostname)
+	})
+}
+
+// GetNodeByHostname finds a Node by its hostname and user ID and returns the Node struct.
+func GetNodeByHostname(tx *gorm.DB, userID types.UserID, hostname string) (*types.Node, error) {
+	mach := types.Node{}
+	if result := tx.
+		Preload("AuthKey").
+		Preload("AuthKey.User").
+		Preload("User").
+		First(&mach, "user_id = ? AND hostname = ?", userID, hostname); result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &mach, nil
+}
+
+func (hsdb *HSDatabase) IsNodeOffline(node *types.Node) bool {
+	return node.IsOnline == nil || !*node.IsOnline
+}
+
 func (hsdb *HSDatabase) SetTags(
 	nodeID types.NodeID,
 	tags []string,

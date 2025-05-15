@@ -918,3 +918,61 @@ func TestListNodes(t *testing.T) {
 	assert.Equal(t, "test1", nodes[0].Hostname)
 	assert.Equal(t, "test2", nodes[1].Hostname)
 }
+
+func TestGetNodeByHostname(t *testing.T) {
+	db, err := newSQLiteTestDB()
+	if err != nil {
+		t.Fatalf("creating db: %s", err)
+	}
+
+	user, err := db.CreateUser(types.User{Name: "test"})
+	require.NoError(t, err)
+
+	node := types.Node{
+		ID:             0,
+		MachineKey:     key.NewMachine().Public(),
+		NodeKey:        key.NewNode().Public(),
+		Hostname:       "testnode",
+		UserID:         user.ID,
+		RegisterMethod: util.RegisterMethodAuthKey,
+	}
+
+	err = db.DB.Save(&node).Error
+	require.NoError(t, err)
+
+	retrievedNode, err := db.GetNodeByHostname(user.ID, "testnode")
+	require.NoError(t, err)
+	assert.Equal(t, node.ID, retrievedNode.ID)
+	assert.Equal(t, node.Hostname, retrievedNode.Hostname)
+}
+
+func TestIsNodeOffline(t *testing.T) {
+	db, err := newSQLiteTestDB()
+	if err != nil {
+		t.Fatalf("creating db: %s", err)
+	}
+
+	user, err := db.CreateUser(types.User{Name: "test"})
+	require.NoError(t, err)
+
+	node := types.Node{
+		ID:             0,
+		MachineKey:     key.NewMachine().Public(),
+		NodeKey:        key.NewNode().Public(),
+		Hostname:       "testnode",
+		UserID:         user.ID,
+		RegisterMethod: util.RegisterMethodAuthKey,
+		IsOnline:       ptr.To(false),
+	}
+
+	err = db.DB.Save(&node).Error
+	require.NoError(t, err)
+
+	assert.True(t, db.IsNodeOffline(&node))
+
+	node.IsOnline = ptr.To(true)
+	err = db.DB.Save(&node).Error
+	require.NoError(t, err)
+
+	assert.False(t, db.IsNodeOffline(&node))
+}

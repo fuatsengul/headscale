@@ -191,6 +191,35 @@ func (h *Headscale) handleRegisterWithAuthKey(
 		return nil, err
 	}
 
+	// Check if the pre-auth key is ephemeral
+	if pak.Ephemeral {
+		// Check if there's a registered node with the same hostname
+		existingNode, err := h.db.GetNodeByHostname(pak.User.ID, regReq.Hostinfo.Hostname)
+		if err == nil {
+			// Check if the already-registered hostname is offline
+			if h.db.IsNodeOffline(existingNode) {
+				// Replace existing node record's machine key and nodeKey with registering device's machine key and node key
+				existingNode.MachineKey = machineKey
+				existingNode.NodeKey = regReq.NodeKey
+
+				// Save the updated node
+				if err := h.db.DB.Save(existingNode).Error; err != nil {
+					return nil, fmt.Errorf("failed to update existing node: %w", err)
+				}
+
+				// Add logging to print node info update
+				log.Info().
+					Str("hostname", existingNode.Hostname).
+					Str("machine_key", existingNode.MachineKey.ShortString()).
+					Str("node_key", existingNode.NodeKey.ShortString()).
+					Msg("Updated existing node with new machine key and node key")
+
+				// Continue with default registration process
+				return nodeToRegisterResponse(existingNode), nil
+			}
+		}
+	}
+
 	nodeToRegister := types.Node{
 		Hostname:       regReq.Hostinfo.Hostname,
 		UserID:         pak.User.ID,
