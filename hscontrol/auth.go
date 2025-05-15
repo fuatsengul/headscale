@@ -174,6 +174,10 @@ func canUsePreAuthKey(pak *types.PreAuthKey) error {
 	return nil
 }
 
+func IsReplaceNodeOnReconnectEnabled() bool {
+	return util.IsReplaceNodeOnReconnectEnabled()
+}
+
 func (h *Headscale) handleRegisterWithAuthKey(
 	regReq tailcfg.RegisterRequest,
 	machineKey key.MachinePublic,
@@ -192,7 +196,7 @@ func (h *Headscale) handleRegisterWithAuthKey(
 	}
 
 	// Check if the pre-auth key is ephemeral
-	if pak.Ephemeral {
+	if pak.Ephemeral && IsReplaceNodeOnReconnectEnabled() {
 		// Check if there's a registered node with the same hostname
 		existingNode, err := h.db.GetNodeByHostname(pak.User.ID, regReq.Hostinfo.Hostname)
 		if err == nil {

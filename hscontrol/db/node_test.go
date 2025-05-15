@@ -976,3 +976,13 @@ func TestIsNodeOffline(t *testing.T) {
 
 	assert.False(t, db.IsNodeOffline(&node))
 }
+
+func TestIsReplaceNodeOnReconnectEnabled(t *testing.T) {
+	// Test when the environment variable is set
+	t.Setenv("REPLACE_NODE_ON_RECONNECT", "true")
+	assert.True(t, util.IsReplaceNodeOnReconnectEnabled())
+
+	// Test when the environment variable is not set
+	t.Setenv("REPLACE_NODE_ON_RECONNECT", "")
+	assert.False(t, util.IsReplaceNodeOnReconnectEnabled())
+}
